@@ -1,0 +1,15 @@
+Add scale=1,-1 Dat/dlambda-layer.H Dat_fortran_no_BC/dlambda-layer.H > result-dlambda
+Add scale=1,-1 Dat/dmu-layer.H Dat_fortran_no_BC/dmu-layer.H > result-dmu
+Add scale=1,-1 Dat/drho-layer.H Dat_fortran_no_BC/drho-layer.H > result-drho
+echo dlambda
+Attr < result-dlambda  
+echo dmu
+Attr < result-dmu
+echo drho
+Attr < result-drho
+
+
+Grey < result-dlambda pclip=100 | Tube
+Grey < result-dmu pclip=100 | Tube
+Grey < result-drho pclip=100 | Tube
+

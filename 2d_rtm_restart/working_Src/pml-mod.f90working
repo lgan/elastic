@@ -1,0 +1,202 @@
+! Program created by Gustavo Catao Alves at
+! the Stanford Exploration Project
+! November, 10th, 2014
+
+! boundary module
+module pml_mod
+
+  use sep
+
+  implicit none
+  integer, private   :: nx, nz, iz, ix, abc
+  real, private      :: dt, dx
+  real, private, allocatable, dimension(:) :: filterx, filterz, filter
+  real, private, allocatable, dimension(:,:) :: d0, d0_x, d0_z, pml0_x, pml0_z, pml1_x, pml1_z
+  real, pointer, private, dimension(:,:) :: vp
+
+  contains
+
+  ! Initialization of all variables needed by this subroutine
+  subroutine pml_init(nz_in,nx_in, dx_in, dt_in,abc_in, vp_in)
+    integer        :: nx_in, nz_in, abc_in
+    real           :: R,dx_in,dt_in
+    real, dimension(:,:),target :: vp_in
+
+    nx = nx_in
+    nz = nz_in
+    dx = dx_in
+    dt = dt_in
+    abc= abc_in
+    vp => vp_in
+
+    allocate(filter(abc))
+    allocate(filterx(nx))
+    allocate(filterz(nz))
+    allocate(d0(nz,nx))
+    allocate(d0_x(nz,nx))
+    allocate(d0_z(nz,nx))
+    allocate(pml0_x(nz,nx))
+    allocate(pml0_z(nz,nx))
+    allocate(pml1_x(nz,nx))
+    allocate(pml1_z(nz,nx))
+
+    R=0.001 !Theoretical reflection paramenter - free variable (~0.001)
+
+    d0=(log(1.0/R))*(1.5*vp)/(abc*dx) !PML absorption parameter
+
+    filter=0.0
+    filterx=0.0
+    filterz=0.0
+
+    do ix=1,abc
+      filter(ix)=(ix/(1.0*abc))*(ix/(1.0*abc))
+    enddo
+
+    !Filter in the x direction
+    do ix=1,abc
+      filterx(ix+5) = filter(abc-ix+1)
+      filterx(nx-abc-5+ix) = filter(ix)
+    enddo
+    !Filter in the z direction
+    do iz=1,abc
+      filterz(iz+5) = filter(abc-iz+1)
+      filterz(nz-abc-5+iz) = filter(iz)
+    enddo
+
+    do ix=1,nx
+      do iz=1,nz
+        d0_x(iz,ix) = d0(iz,ix)*filterx(ix)
+        d0_z(iz,ix) = d0(iz,ix)*filterz(iz)
+      enddo
+    enddo
+
+    pml0_x = 1.0-(dt*d0_x/2.0)
+    pml0_z = 1.0-(dt*d0_z/2.0)
+    pml1_x = 1.0/(1.0+(dt*d0_x/2.0))
+    pml1_z = 1.0/(1.0+(dt*d0_z/2.0))
+    !pml0_x = 1.0
+    !pml0_z = 1.0
+    !pml1_x = 1.0
+    !pml1_z = 1.0
+
+    call to_history("n1",nz, "Dat/d0_x.H")
+    call to_history("o1",0.0, "Dat/d0_x.H")
+    call to_history("d1",1, "Dat/d0_x.H")
+    call to_history("n2",nx, "Dat/d0_x.H")
+    call to_history("o2",0.0, "Dat/d0_x.H")
+    call to_history("d2",1, "Dat/d0_x.H")
+    call sep_write(d0_x,"Dat/d0_x.H")
+
+    call to_history("n1",nz, "Dat/d0_z.H")
+    call to_history("o1",0.0, "Dat/d0_z.H")
+    call to_history("d1",1, "Dat/d0_z.H")
+    call to_history("n2",nx, "Dat/d0_z.H")
+    call to_history("o2",0.0, "Dat/d0_z.H")
+    call to_history("d2",1, "Dat/d0_z.H")
+    call sep_write(d0_z,"Dat/d0_z.H")
+
+  endsubroutine
+
+  ! Function that is called by elastic_mod
+  ! These subroutines apply an absorbing boundary condition
+  function boundary_op0_x(adj,add,model,data) result(stat)
+    logical,intent(in)          :: adj,add
+    !real*16,dimension(:,:)         :: model,data
+    real,dimension(:,:)         :: model,data
+    integer                     :: stat
+
+    call pml_op0_x(adj,add,model,data)
+    stat=0
+  endfunction
+
+  ! PML
+  subroutine pml_op0_x(adj,add,model,data)
+    logical,intent(in)        :: add,adj
+    !real*16,dimension(nz,nx)         :: model,data
+    real,dimension(nz,nx)     :: model,data
+
+    if(adj)then
+      if(.not.add) model=0.0
+      model = model + pml0_x*data
+    else
+      if(.not.add) data=0.0
+      data = data + pml0_x*model
+    endif
+  endsubroutine
+
+  function boundary_op0_z(adj,add,model,data) result(stat)
+    logical,intent(in)          :: adj,add
+    !real*16,dimension(:,:)         :: model,data
+    real,dimension(:,:)         :: model,data
+    integer                     :: stat
+
+    call pml_op0_z(adj,add,model,data)
+    stat=0
+  endfunction
+
+  ! PML
+  subroutine pml_op0_z(adj,add,model,data)
+    logical,intent(in)        :: add,adj
+    !real*16,dimension(nz,nx)         :: model,data
+    real,dimension(nz,nx)     :: model,data
+
+    if(adj)then
+      if(.not.add) model=0.0
+      model = model + pml0_z*data
+    else
+      if(.not.add) data=0.0
+      data = data + pml0_z*model
+    endif
+  endsubroutine
+
+  function boundary_op1_x(adj,add,model,data) result(stat)
+    logical,intent(in)          :: adj,add
+    !real*16,dimension(:,:)         :: model,data
+    real,dimension(:,:)         :: model,data
+    integer                     :: stat
+
+    call pml_op1_x(adj,add,model,data)
+    stat=0
+  endfunction
+
+  ! PML
+  subroutine pml_op1_x(adj,add,model,data)
+    logical,intent(in)        :: add,adj
+    !real*16,dimension(nz,nx)         :: model,data
+    real,dimension(nz,nx)     :: model,data
+
+    if(adj)then
+      if(.not.add) model=0.0
+      model = model + pml1_x*data
+    else
+      if(.not.add) data=0.0
+      data = data + pml1_x*model
+    endif
+  endsubroutine
+
+  function boundary_op1_z(adj,add,model,data) result(stat)
+    logical,intent(in)          :: adj,add
+    !real*16,dimension(:,:)         :: model,data
+    real,dimension(:,:)         :: model,data
+    integer                     :: stat
+
+    call pml_op1_z(adj,add,model,data)
+    stat=0
+  endfunction
+
+  ! PML
+  subroutine pml_op1_z(adj,add,model,data)
+    logical,intent(in)        :: add,adj
+    !real*16,dimension(nz,nx)         :: model,data
+    real,dimension(nz,nx)     :: model,data
+
+    if(adj)then
+      if(.not.add) model=0.0
+      model = model + pml1_z*data
+    else
+      if(.not.add) data=0.0
+      data = data + pml1_z*model
+    endif
+  endsubroutine
+
+endmodule

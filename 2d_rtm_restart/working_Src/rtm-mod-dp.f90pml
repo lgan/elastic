@@ -1,0 +1,853 @@
+! Program created by Gustavo Catao Alves at
+! the Stanford Exploration Project
+! Jan, 22th, 2015
+
+! Forward Born modeling program, based on the velocity-stress
+! elastic modeling program
+
+! FD elastic operator module
+! This is the main subroutine that calls
+! the FD derivatives, sources, etc.
+module rtm_mod_dp_pml
+
+  use rtmlib_mod_double
+  use sep
+
+  implicit none
+  integer, private :: nt, nx, nz
+  real, private    :: dt, dx, dz
+
+  contains
+
+  ! Initialization of all variables needed by this subroutine
+  subroutine elastic_init(nz_in,dz_in,nx_in,dx_in,dt_in)
+
+    integer             :: nz_in,nx_in
+    real                :: dz_in,dx_in,dt_in
+
+    nz = nz_in
+    dz = dz_in
+    dt = dt_in
+    nx = nx_in
+    dx = dx_in
+
+  end subroutine
+
+  ! Function that is called by Main
+  function elastic_op(vp0, vs0, rho0) result(stat)
+    real,dimension(:,:)         :: vp0, vs0, rho0
+    integer                     :: stat
+
+    stat=1
+    call elastic_op2(vp0, vs0, rho0)
+    stat=0
+  end function
+
+  ! Subroutine used by function
+  subroutine elastic_op2(vp0, vs0, rho0)
+    integer                                 :: it, ix, iz
+    real, dimension(nz,nx)                  :: vp0,vs0,rho0
+    real                                    :: aux1
+    integer                                 :: stat
+
+    !Background properties
+    real*8, allocatable, dimension(:,:)     :: mi0,l0,l2mi0
+    real*8, allocatable, dimension(:,:)     :: rho0_Vx,rho0_Vz
+
+    !model 1
+    real*8, allocatable, dimension(:,:,:)   :: Vx_x,Vx_z,Vz_x,Vz_z
+    real*8, allocatable, dimension(:,:,:)   :: sigmaxx_x,sigmaxx_z,sigmazz_x,sigmazz_z
+    real*8, allocatable, dimension(:,:,:)   :: sigmaxz_x,sigmaxz_z
+
+    !data 1
+    real*8, allocatable, dimension(:,:,:)   :: Vx_x_f,Vx_z_f,Vz_x_f,Vz_z_f
+    real*8, allocatable, dimension(:,:,:)   :: sigmaxx_x_f,sigmaxx_z_f,sigmazz_x_f,sigmazz_z_f
+    real*8, allocatable, dimension(:,:,:)   :: sigmaxz_x_f,sigmaxz_z_f
+
+    !data 2
+    real*8, allocatable, dimension(:,:,:)   :: Vx_x2,Vx_z2,Vz_x2,Vz_z2
+    real*8, allocatable, dimension(:,:,:)   :: sigmaxx_x2,sigmaxx_z2,sigmazz_x2,sigmazz_z2
+    real*8, allocatable, dimension(:,:,:)   :: sigmaxz_x2,sigmaxz_z2
+
+    !model 2
+    real*8, allocatable, dimension(:,:,:)   :: Vx_x2_adj,Vx_z2_adj,Vz_x2_adj,Vz_z2_adj
+    real*8, allocatable, dimension(:,:,:)   :: sigmaxx_x2_adj,sigmaxx_z2_adj,sigmazz_x2_adj,sigmazz_z2_adj
+    real*8, allocatable, dimension(:,:,:)   :: sigmaxz_x2_adj,sigmaxz_z2_adj
+
+    !Test sums
+    real*8                                   :: sumvxx,sumvxz,sumvzx,sumvzz
+    real*8                                   :: sumsigmaxxx,sumsigmaxxz,sumsigmazzx,sumsigmazzz
+    real*8                                   :: sumsigmaxzx,sumsigmaxzz
+
+    !Dot product test result
+    real*8                                   :: dp1, dp2
+
+    nt=100
+
+    !Allocate lame parameters
+    allocate(mi0(nz,nx))
+    allocate(l0(nz,nx))
+    allocate(l2mi0(nz,nx))
+    allocate(rho0_Vx(nz,nx))
+    allocate(rho0_Vz(nz,nx))
+
+    !Allocate Velocities and stresses
+    !model 1
+    allocate(Vx_x(nz,nx,nt))
+    allocate(Vx_z(nz,nx,nt))
+    allocate(Vz_x(nz,nx,nt))
+    allocate(Vz_z(nz,nx,nt))
+    allocate(sigmaxx_x(nz,nx,nt))
+    allocate(sigmaxx_z(nz,nx,nt))
+    allocate(sigmazz_x(nz,nx,nt))
+    allocate(sigmazz_z(nz,nx,nt))
+    allocate(sigmaxz_x(nz,nx,nt))
+    allocate(sigmaxz_z(nz,nx,nt))
+
+    !data 1
+    allocate(Vx_x_f(nz,nx,nt))
+    allocate(Vx_z_f(nz,nx,nt))
+    allocate(Vz_x_f(nz,nx,nt))
+    allocate(Vz_z_f(nz,nx,nt))
+    allocate(sigmaxx_x_f(nz,nx,nt))
+    allocate(sigmaxx_z_f(nz,nx,nt))
+    allocate(sigmazz_x_f(nz,nx,nt))
+    allocate(sigmazz_z_f(nz,nx,nt))
+    allocate(sigmaxz_x_f(nz,nx,nt))
+    allocate(sigmaxz_z_f(nz,nx,nt))
+
+    !data 2
+    allocate(Vx_x2(nz,nx,nt))
+    allocate(Vx_z2(nz,nx,nt))
+    allocate(Vz_x2(nz,nx,nt))
+    allocate(Vz_z2(nz,nx,nt))
+    allocate(sigmaxx_x2(nz,nx,nt))
+    allocate(sigmaxx_z2(nz,nx,nt))
+    allocate(sigmazz_x2(nz,nx,nt))
+    allocate(sigmazz_z2(nz,nx,nt))
+    allocate(sigmaxz_x2(nz,nx,nt))
+    allocate(sigmaxz_z2(nz,nx,nt))
+
+    !model 2
+    allocate(Vx_x2_adj(nz,nx,nt))
+    allocate(Vx_z2_adj(nz,nx,nt))
+    allocate(Vz_x2_adj(nz,nx,nt))
+    allocate(Vz_z2_adj(nz,nx,nt))
+    allocate(sigmaxx_x2_adj(nz,nx,nt))
+    allocate(sigmaxx_z2_adj(nz,nx,nt))
+    allocate(sigmazz_x2_adj(nz,nx,nt))
+    allocate(sigmazz_z2_adj(nz,nx,nt))
+    allocate(sigmaxz_x2_adj(nz,nx,nt))
+    allocate(sigmaxz_z2_adj(nz,nx,nt))
+
+    !Initialize values
+    !Background properties
+    mi0         =0.0
+    l0          =0.0
+    l2mi0       =0.0
+    rho0_Vx     =0.0
+    rho0_Vz     =0.0
+
+    !model 1
+    Vx_x       =0.0
+    Vx_z       =0.0
+    Vz_x       =0.0
+    Vz_z       =0.0
+    sigmaxx_x  =0.0
+    sigmaxx_z  =0.0
+    sigmazz_x  =0.0
+    sigmazz_z  =0.0
+    sigmaxz_x  =0.0
+    sigmaxz_z  =0.0
+
+    !data 1
+    Vx_x_f       =0.0
+    Vx_z_f       =0.0
+    Vz_x_f       =0.0
+    Vz_z_f       =0.0
+    sigmaxx_x_f  =0.0
+    sigmaxx_z_f  =0.0
+    sigmazz_x_f  =0.0
+    sigmazz_z_f  =0.0
+    sigmaxz_x_f  =0.0
+    sigmaxz_z_f  =0.0
+
+    !data 2
+    Vx_x2       =0.0
+    Vx_z2       =0.0
+    Vz_x2       =0.0
+    Vz_z2       =0.0
+    sigmaxx_x2  =0.0
+    sigmaxx_z2  =0.0
+    sigmazz_x2  =0.0
+    sigmazz_z2  =0.0
+    sigmaxz_x2  =0.0
+    sigmaxz_z2  =0.0
+
+    !model 1
+    Vx_x2_adj       =0.0
+    Vx_z2_adj       =0.0
+    Vz_x2_adj       =0.0
+    Vz_z2_adj       =0.0
+    sigmaxx_x2_adj  =0.0
+    sigmaxx_z2_adj  =0.0
+    sigmazz_x2_adj  =0.0
+    sigmazz_z2_adj  =0.0
+    sigmaxz_x2_adj  =0.0
+    sigmaxz_z2_adj  =0.0
+
+
+    !Define Lame parameters
+    !These model properties are still in the original grid, centered at i,j
+    do ix=1,nx
+      do iz=1,nz
+        l0(iz,ix)=vp0(iz,ix)
+        mi0(iz,ix)=vs0(iz,ix)
+      enddo
+    enddo
+
+    !Calculate inverse of density
+    !These also calculate the values of density at the velocity staggered grid,
+    !using the arithmetic average proposed in Moczo, 2002
+    !Rho_Vx
+
+    aux1=(dt/dx)
+
+    !Rho_vx
+    do ix=1,nx
+      do iz=1,nz-1
+        rho0_Vx(iz,ix)=aux1*1.0/(0.5*(rho0(iz+1,ix) + rho0(iz,ix)))
+      enddo
+    enddo
+    !Rho_vz
+    do ix=1,nx-1
+      do iz=1,nz
+        rho0_Vz(iz,ix)=aux1*1.0/(0.5*(rho0(iz,ix+1) + rho0(iz,ix)))
+      enddo
+    enddo
+    !Right side
+    do iz=1,nz
+      rho0_Vz(iz,nx)=aux1*(1.0/rho0(iz,nx))
+    enddo
+    !Bottom
+    do ix=1,nx
+      rho0_Vx(nz,ix)=aux1*(1.0/rho0(nz,ix))
+    enddo
+    
+    !Calculate weigthed average for the lambda variable
+    !These put lambda and (lambda+2mi) in their respective staggered grids,
+    !using the harmonic average proposed in Moczo, 2002
+    l0 = aux1*l0
+    mi0=aux1*mi0
+    do ix=2,nx-1
+      do iz=2,nz-1
+        l0(iz,ix)=4.0/((1.0/l0(iz,ix))+(1.0/l0(iz+1,ix))+(1.0/l0(iz,ix+1))+(1.0/l0(iz+1,ix+1)))
+        if (mi0(iz,ix)==0.or.mi0(iz+1,ix)==0.or.mi0(iz,ix+1)==0.or.mi0(iz+1,ix+1)==0) then
+          mi0(iz,ix)=0.0
+        else
+          mi0(iz,ix)=4.0/((1.0/mi0(iz,ix))+(1.0/mi0(iz+1,ix))+(1.0/mi0(iz,ix+1))+(1.0/mi0(iz+1,ix+1)))
+        endif
+      enddo
+    enddo
+    l2mi0=l0+2*mi0
+
+    !Initialize subroutines
+    call rtmmod_init(nz,nx,rho0_Vx,rho0_Vz,l0,mi0,l2mi0)
+    
+!###################################################
+! Create random model 1 and data 2
+!###################################################
+
+    !model 1
+    do it=1,nt
+      do ix=6,nx-5
+        do iz=6,nz-5
+          call random_number(Vx_x(iz,ix,it))
+          call random_number(Vx_z(iz,ix,it))
+          call random_number(Vz_x(iz,ix,it))
+          call random_number(Vz_z(iz,ix,it))
+          call random_number(sigmaxx_x(iz,ix,it))
+          call random_number(sigmaxx_z(iz,ix,it))
+          call random_number(sigmazz_x(iz,ix,it))
+          call random_number(sigmazz_z(iz,ix,it))
+          call random_number(sigmaxz_x(iz,ix,it))
+          call random_number(sigmaxz_z(iz,ix,it))
+
+    !data 2
+          call random_number(Vx_x2(iz,ix,it))
+          call random_number(Vx_z2(iz,ix,it))
+          call random_number(Vz_x2(iz,ix,it))
+          call random_number(Vz_z2(iz,ix,it))
+          call random_number(sigmaxx_x2(iz,ix,it))
+          call random_number(sigmaxx_z2(iz,ix,it))
+          call random_number(sigmazz_x2(iz,ix,it))
+          call random_number(sigmazz_z2(iz,ix,it))
+          call random_number(sigmaxz_x2(iz,ix,it))
+          call random_number(sigmaxz_z2(iz,ix,it))
+        enddo
+      enddo
+    enddo
+
+    sumvxx=0.
+    sumvxz=0.
+    sumvzx=0.
+    sumvzz=0.
+    sumsigmaxxx=0.
+    sumsigmaxxz=0.
+    sumsigmazzx=0.
+    sumsigmazzz=0.
+    sumsigmaxzx=0.
+    sumsigmaxzz=0.
+    
+    write(0,*)"============================================================="
+    write(0,*)"TEST RANDOM INPUT MODEL 1"
+    write(0,*)"============================================================="
+    do it=1,nt
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sumvxx = sumvxx + Vx_x(iz,ix,it)
+          sumvxz = sumvxz + Vx_z(iz,ix,it)
+          sumvzx = sumvzx + Vz_x(iz,ix,it)
+          sumvzz = sumvzz + Vz_z(iz,ix,it)
+          sumsigmaxxx = sumsigmaxxx + sigmaxx_x(iz,ix,it)
+          sumsigmaxxz = sumsigmaxxz + sigmaxx_z(iz,ix,it)
+          sumsigmazzx = sumsigmazzx + sigmazz_x(iz,ix,it)
+          sumsigmazzz = sumsigmazzz + sigmazz_z(iz,ix,it)
+          sumsigmaxzx = sumsigmaxzx + sigmaxz_x(iz,ix,it)
+          sumsigmaxzz = sumsigmaxzz + sigmaxz_z(iz,ix,it)
+        enddo
+      enddo
+    enddo
+
+    write(0,*)sumvxx,sumvxz,sumvzx,sumvzz,sumsigmaxxx,sumsigmaxxz,sumsigmazzx,sumsigmazzz,sumsigmaxzx,sumsigmaxzz
+
+    sumvxx=0.
+    sumvxz=0.
+    sumvzx=0.
+    sumvzz=0.   
+    sumsigmaxxx=0.
+    sumsigmaxxz=0.
+    sumsigmazzx=0.
+    sumsigmazzz=0.
+    sumsigmaxzx=0.
+    sumsigmaxzz=0.
+
+    write(0,*)"============================================================="
+    write(0,*)"TEST RANDOM INPUT DATA 2"
+    write(0,*)"============================================================="
+    do it=1,nt
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sumvxx = sumvxx + Vx_x2(iz,ix,it)
+          sumvxz = sumvxz + Vx_z2(iz,ix,it)
+          sumvzx = sumvzx + Vz_x2(iz,ix,it)
+          sumvzz = sumvzz + Vz_z2(iz,ix,it)
+          sumsigmaxxx = sumsigmaxxx + sigmaxx_x2(iz,ix,it)
+          sumsigmaxxz = sumsigmaxxz + sigmaxx_z2(iz,ix,it)
+          sumsigmazzx = sumsigmazzx + sigmazz_x2(iz,ix,it)
+          sumsigmazzz = sumsigmazzz + sigmazz_z2(iz,ix,it)
+          sumsigmaxzx = sumsigmaxzx + sigmaxz_x2(iz,ix,it)
+          sumsigmaxzz = sumsigmaxzz + sigmaxz_z2(iz,ix,it)
+        enddo
+      enddo
+    enddo
+
+    write(0,*)sumvxx,sumvxz,sumvzx,sumvzz,sumsigmaxxx,sumsigmaxxz,sumsigmazzx,sumsigmazzz,sumsigmaxzx,sumsigmaxzz
+
+    !Time loop for 2nd order time
+    write(0,*)"============================================================="
+    write(0,*)"BEGIN OF TIME MODELING"
+    write(0,*)"============================================================="
+!    write(0,*)"Processing:"
+!    write(0,*)"0%           25%            50%           75%            100%"
+!    write(0,'(a)',advance="no")"["
+
+!###################################################
+! Forward
+!###################################################
+! B d1 = m1
+! First time steps
+    !it=1
+    Vx_x_f(:,:,1) = 0.
+    Vx_z_f(:,:,1) = 0.
+    Vz_x_f(:,:,1) = 0.
+    Vz_z_f(:,:,1) = 0.
+    sigmaxx_x_f(:,:,1) = 0.
+    sigmaxx_z_f(:,:,1) = 0.
+    sigmazz_x_f(:,:,1) = 0.
+    sigmazz_z_f(:,:,1) = 0.
+    sigmaxz_x_f(:,:,1) = 0.
+    sigmaxz_z_f(:,:,1) = 0.
+
+    !it=2
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vx_x_f(iz,ix,2) = Vx_x(iz,ix,1) 
+          Vx_z_f(iz,ix,2) = Vx_z(iz,ix,1) 
+          Vz_x_f(iz,ix,2) = Vz_x(iz,ix,1)
+          Vz_z_f(iz,ix,2) = Vz_z(iz,ix,1)
+          sigmaxx_x_f(iz,ix,2) = sigmaxx_x(iz,ix,1)
+          sigmaxx_z_f(iz,ix,2) = sigmaxx_z(iz,ix,1)
+          sigmazz_x_f(iz,ix,2) = sigmazz_x(iz,ix,1)
+          sigmazz_z_f(iz,ix,2) = sigmazz_z(iz,ix,1)
+          sigmaxz_x_f(iz,ix,2) = sigmaxz_x(iz,ix,1)
+          sigmaxz_z_f(iz,ix,2) = sigmaxz_z(iz,ix,1)
+        enddo
+      enddo
+
+    !it=3 until it=nt
+    do it=3,nt
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vx_x_f(iz,ix,it) = Vx_x_f(iz,ix,(it-2)) + Vx_x(iz,ix,(it-1))
+        enddo
+      enddo
+      !Vx_x
+      call Ax(.false.,.true.,sigmaxx_x_f(:,:,(it-1)),Vx_x_f(:,:,it))
+      call Ax(.false.,.true.,sigmaxx_z_f(:,:,(it-1)),Vx_x_f(:,:,it))
+
+      !Vx_z
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vx_z_f(iz,ix,it) = Vx_z_f(iz,ix,(it-2)) + Vx_z(iz,ix,(it-1))
+        enddo
+      enddo
+      call Bx(.false.,.true.,sigmaxz_x_f(:,:,(it-1)),Vx_z_f(:,:,it))
+      call Bx(.false.,.true.,sigmaxz_z_f(:,:,(it-1)),Vx_z_f(:,:,it))
+
+      !Vz_x
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vz_x_f(iz,ix,it) = Vz_x_f(iz,ix,(it-2)) + Vz_x(iz,ix,(it-1))
+        enddo
+      enddo
+      call Az(.false.,.true.,sigmaxz_x_f(:,:,(it-1)),Vz_x_f(:,:,it))
+      call Az(.false.,.true.,sigmaxz_z_f(:,:,(it-1)),Vz_x_f(:,:,it))
+
+      !Vz_z
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vz_z_f(iz,ix,it) = Vz_z_f(iz,ix,(it-2)) + Vz_z(iz,ix,(it-1))
+        enddo
+      enddo
+      call Bz(.false.,.true.,sigmazz_x_f(:,:,(it-1)),Vz_z_f(:,:,it))
+      call Bz(.false.,.true.,sigmazz_z_f(:,:,(it-1)),Vz_z_f(:,:,it))
+
+      !sigmaxx_x
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmaxx_x_f(iz,ix,it) = sigmaxx_x_f(iz,ix,(it-2)) + sigmaxx_x(iz,ix,(it-1))
+        enddo
+      enddo
+      call D(.false.,.true.,Vx_x_f(:,:,(it-1)),sigmaxx_x_f(:,:,it))
+      call D(.false.,.true.,Vx_z_f(:,:,(it-1)),sigmaxx_x_f(:,:,it))
+
+      !sigmaxx_z
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmaxx_z_f(iz,ix,it) = sigmaxx_z_f(iz,ix,(it-2)) + sigmaxx_z(iz,ix,(it-1))
+        enddo
+      enddo
+      call E(.false.,.true.,Vz_x_f(:,:,(it-1)),sigmaxx_z_f(:,:,it))
+      call E(.false.,.true.,Vz_z_f(:,:,(it-1)),sigmaxx_z_f(:,:,it))
+
+      !sigmazz_x
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmazz_x_f(iz,ix,it) = sigmazz_x_f(iz,ix,(it-2)) + sigmazz_x(iz,ix,(it-1))
+        enddo
+      enddo
+      call F(.false.,.true.,Vx_x_f(:,:,(it-1)),sigmazz_x_f(:,:,it))
+      call F(.false.,.true.,Vx_z_f(:,:,(it-1)),sigmazz_x_f(:,:,it))
+
+      !sigmazz_z
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmazz_z_f(iz,ix,it) = sigmazz_z_f(iz,ix,(it-2)) + sigmazz_z(iz,ix,(it-1))
+        enddo
+      enddo
+      call G(.false.,.true.,Vz_x_f(:,:,(it-1)),sigmazz_z_f(:,:,it))
+      call G(.false.,.true.,Vz_z_f(:,:,(it-1)),sigmazz_z_f(:,:,it))
+
+      !sigmaxz_x
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmaxz_x_f(iz,ix,it) = sigmaxz_x_f(iz,ix,(it-2)) + sigmaxz_x(iz,ix,(it-1))
+        enddo
+      enddo
+      call H(.false.,.true.,Vx_x_f(:,:,(it-1)),sigmaxz_x_f(:,:,it))
+      call H(.false.,.true.,Vx_z_f(:,:,(it-1)),sigmaxz_x_f(:,:,it))
+
+      !sigmaxz_z
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmaxz_z_f(iz,ix,it) = sigmaxz_z_f(iz,ix,(it-2)) + sigmaxz_z(iz,ix,(it-1))
+        enddo
+      enddo
+      call J(.false.,.true.,Vz_x_f(:,:,(it-1)),sigmaxz_z_f(:,:,it))
+      call J(.false.,.true.,Vz_z_f(:,:,(it-1)),sigmaxz_z_f(:,:,it))
+
+    enddo
+
+    sumvxx=0.
+    sumvxz=0.
+    sumvzx=0.
+    sumvzz=0.   
+    sumsigmaxxx=0.
+    sumsigmaxxz=0.
+    sumsigmazzx=0.
+    sumsigmazzz=0.
+    sumsigmaxzx=0.
+    sumsigmaxzz=0.
+
+    write(0,*)"============================================================="
+    write(0,*)"TEST RANDOM OUTPUT DATA 1"
+    write(0,*)"============================================================="
+    do it=1,nt
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sumvxx = sumvxx + Vx_x_f(iz,ix,it)
+          sumvxz = sumvxz + Vx_z_f(iz,ix,it)
+          sumvzx = sumvzx + Vz_x_f(iz,ix,it)
+          sumvzz = sumvzz + Vz_z_f(iz,ix,it)
+          sumsigmaxxx = sumsigmaxxx + sigmaxx_x_f(iz,ix,it)
+          sumsigmaxxz = sumsigmaxxz + sigmaxx_z_f(iz,ix,it)
+          sumsigmazzx = sumsigmazzx + sigmazz_x_f(iz,ix,it)
+          sumsigmazzz = sumsigmazzz + sigmazz_z_f(iz,ix,it)
+          sumsigmaxzx = sumsigmaxzx + sigmaxz_x_f(iz,ix,it)
+          sumsigmaxzz = sumsigmaxzz + sigmaxz_z_f(iz,ix,it)
+        enddo
+      enddo
+    enddo
+
+    write(0,*)sumvxx,sumvxz,sumvzx,sumvzz,sumsigmaxxx,sumsigmaxxz,sumsigmazzx,sumsigmazzz,sumsigmaxzx,sumsigmaxzz
+
+
+!###################################################
+! Adjoint application
+!###################################################
+! B*m2 = d2
+! Last time steps
+    !it=nt
+    Vx_x2_adj(:,:,nt) = 0.
+    Vx_z2_adj(:,:,nt) = 0.
+    Vz_x2_adj(:,:,nt) = 0.
+    Vz_z2_adj(:,:,nt) = 0.
+    sigmaxx_x2_adj(:,:,nt) = 0.
+    sigmaxx_z2_adj(:,:,nt) = 0.
+    sigmazz_x2_adj(:,:,nt) = 0.
+    sigmazz_z2_adj(:,:,nt) = 0.
+    sigmaxz_x2_adj(:,:,nt) = 0.
+    sigmaxz_z2_adj(:,:,nt) = 0.
+
+    !it=nt-1
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vx_x2_adj(iz,ix,(nt-1)) = Vx_x2(iz,ix,nt) 
+          Vx_z2_adj(iz,ix,(nt-1)) = Vx_z2(iz,ix,nt) 
+          Vz_x2_adj(iz,ix,(nt-1)) = Vz_x2(iz,ix,nt)
+          Vz_z2_adj(iz,ix,(nt-1)) = Vz_z2(iz,ix,nt)
+          sigmaxx_x2_adj(iz,ix,(nt-1)) = sigmaxx_x2(iz,ix,nt)
+          sigmaxx_z2_adj(iz,ix,(nt-1)) = sigmaxx_z2(iz,ix,nt)
+          sigmazz_x2_adj(iz,ix,(nt-1)) = sigmazz_x2(iz,ix,nt)
+          sigmazz_z2_adj(iz,ix,(nt-1)) = sigmazz_z2(iz,ix,nt)
+          sigmaxz_x2_adj(iz,ix,(nt-1)) = sigmaxz_x2(iz,ix,nt)
+          sigmaxz_z2_adj(iz,ix,(nt-1)) = sigmaxz_z2(iz,ix,nt)
+        enddo
+      enddo
+
+    !it=nt-2
+    !Vx_x
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vx_x2_adj(iz,ix,(nt-2)) = Vx_x2(iz,ix,(nt-1))
+        enddo
+      enddo
+    call D(.true.,.true.,sigmaxx_x2_adj(:,:,(nt-1)),Vx_x2_adj(:,:,(nt-2)))    
+    call F(.true.,.true.,sigmazz_x2_adj(:,:,(nt-1)),Vx_x2_adj(:,:,(nt-2)))
+    call H(.true.,.true.,sigmaxz_x2_adj(:,:,(nt-1)),Vx_x2_adj(:,:,(nt-2)))
+    !Vx_z
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vx_z2_adj(iz,ix,(nt-2)) = Vx_z2(iz,ix,(nt-1))
+        enddo
+      enddo
+    call D(.true.,.true.,sigmaxx_x2_adj(:,:,(nt-1)),Vx_z2_adj(:,:,(nt-2)))    
+    call F(.true.,.true.,sigmazz_x2_adj(:,:,(nt-1)),Vx_z2_adj(:,:,(nt-2)))
+    call H(.true.,.true.,sigmaxz_x2_adj(:,:,(nt-1)),Vx_z2_adj(:,:,(nt-2)))
+    !Vz_x
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vz_x2_adj(iz,ix,(nt-2)) = Vz_x2(iz,ix,(nt-1))
+        enddo
+      enddo
+    call E(.true.,.true.,sigmaxx_z2_adj(:,:,(nt-1)),Vz_x2_adj(:,:,(nt-2)))    
+    call G(.true.,.true.,sigmazz_z2_adj(:,:,(nt-1)),Vz_x2_adj(:,:,(nt-2)))
+    call J(.true.,.true.,sigmaxz_z2_adj(:,:,(nt-1)),Vz_x2_adj(:,:,(nt-2)))
+    !Vz_z
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vz_z2_adj(iz,ix,(nt-2)) = Vz_z2(iz,ix,(nt-1))
+        enddo
+      enddo
+    call E(.true.,.true.,sigmaxx_z2_adj(:,:,(nt-1)),Vz_z2_adj(:,:,(nt-2)))    
+    call G(.true.,.true.,sigmazz_z2_adj(:,:,(nt-1)),Vz_z2_adj(:,:,(nt-2)))
+    call J(.true.,.true.,sigmaxz_z2_adj(:,:,(nt-1)),Vz_z2_adj(:,:,(nt-2)))
+    !sigmaxx_x
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmaxx_x2_adj(iz,ix,(nt-2)) = sigmaxx_x2(iz,ix,(nt-1))
+        enddo
+      enddo
+    call Ax(.true.,.true.,Vx_x2_adj(:,:,(nt-1)),sigmaxx_x2_adj(:,:,(nt-2)))
+    !sigmaxx_z
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmaxx_z2_adj(iz,ix,(nt-2)) = sigmaxx_z2(iz,ix,(nt-1))
+        enddo
+      enddo
+    call Ax(.true.,.true.,Vx_x2_adj(:,:,(nt-1)),sigmaxx_z2_adj(:,:,(nt-2)))
+    !sigmazz_x
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmazz_x2_adj(iz,ix,(nt-2)) = sigmazz_x2(iz,ix,(nt-1))
+        enddo
+      enddo
+    call Bz(.true.,.true.,Vz_z2_adj(:,:,(nt-1)),sigmazz_x2_adj(:,:,(nt-2)))
+    !sigmazz_z
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmazz_z2_adj(iz,ix,(nt-2)) = sigmazz_z2(iz,ix,(nt-1))
+        enddo
+      enddo
+    call Bz(.true.,.true.,Vz_z2_adj(:,:,(nt-1)),sigmazz_z2_adj(:,:,(nt-2)))
+    !sigmaxz_x
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmaxz_x2_adj(iz,ix,(nt-2)) = sigmaxz_x2(iz,ix,(nt-1))
+        enddo
+      enddo
+    call Bx(.true.,.true.,Vx_z2_adj(:,:,(nt-1)),sigmaxz_x2_adj(:,:,(nt-2)))
+    call Az(.true.,.true.,Vz_x2_adj(:,:,(nt-1)),sigmaxz_x2_adj(:,:,(nt-2)))
+    !sigmaxz_z
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmaxz_z2_adj(iz,ix,(nt-2)) = sigmaxz_z2(iz,ix,(nt-1))
+        enddo
+      enddo
+    call Bx(.true.,.true.,Vx_z2_adj(:,:,(nt-1)),sigmaxz_z2_adj(:,:,(nt-2)))
+    call Az(.true.,.true.,Vz_x2_adj(:,:,(nt-1)),sigmaxz_z2_adj(:,:,(nt-2)))
+
+    !it=nt-3 until it=1
+    do it=nt-3,1,-1
+
+    !Vx_x
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vx_x2_adj(iz,ix,it) = Vx_x2(iz,ix,(it+1))
+        enddo
+      enddo
+      call D(.true.,.true.,sigmaxx_x2_adj(:,:,(it+1)),Vx_x2_adj(:,:,it))    
+      call F(.true.,.true.,sigmazz_x2_adj(:,:,(it+1)),Vx_x2_adj(:,:,it))
+      call H(.true.,.true.,sigmaxz_x2_adj(:,:,(it+1)),Vx_x2_adj(:,:,it))
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vx_x2_adj(iz,ix,it) = Vx_x2_adj(iz,ix,it) + Vx_x2_adj(iz,ix,(it+2))
+        enddo
+      enddo
+    !Vx_z
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vx_z2_adj(iz,ix,it) = Vx_z2(iz,ix,(it+1))
+        enddo
+      enddo
+      call D(.true.,.true.,sigmaxx_x2_adj(:,:,(it+1)),Vx_z2_adj(:,:,it))    
+      call F(.true.,.true.,sigmazz_x2_adj(:,:,(it+1)),Vx_z2_adj(:,:,it))
+      call H(.true.,.true.,sigmaxz_x2_adj(:,:,(it+1)),Vx_z2_adj(:,:,it))
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vx_z2_adj(iz,ix,it) = Vx_z2_adj(iz,ix,it) + Vx_z2_adj(iz,ix,(it+2))
+        enddo
+      enddo
+    !Vz_x
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vz_x2_adj(iz,ix,it) = Vz_x2(iz,ix,(it+1))
+        enddo
+      enddo
+      call E(.true.,.true.,sigmaxx_z2_adj(:,:,(it+1)),Vz_x2_adj(:,:,it))    
+      call G(.true.,.true.,sigmazz_z2_adj(:,:,(it+1)),Vz_x2_adj(:,:,it))
+      call J(.true.,.true.,sigmaxz_z2_adj(:,:,(it+1)),Vz_x2_adj(:,:,it))
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vz_x2_adj(iz,ix,it) = Vz_x2_adj(iz,ix,it) + Vz_x2_adj(iz,ix,(it+2))
+        enddo
+      enddo
+    !Vz_z
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vz_z2_adj(iz,ix,it) = Vz_z2(iz,ix,(it+1))
+        enddo
+      enddo
+      call E(.true.,.true.,sigmaxx_z2_adj(:,:,(it+1)),Vz_z2_adj(:,:,it))    
+      call G(.true.,.true.,sigmazz_z2_adj(:,:,(it+1)),Vz_z2_adj(:,:,it))
+      call J(.true.,.true.,sigmaxz_z2_adj(:,:,(it+1)),Vz_z2_adj(:,:,it))
+      do ix=6,nx-5
+        do iz=6,nz-5
+          Vz_z2_adj(iz,ix,it) = Vz_z2_adj(iz,ix,it) + Vz_z2_adj(iz,ix,(it+2))
+        enddo
+      enddo
+    !sigmaxx_x
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmaxx_x2_adj(iz,ix,it) = sigmaxx_x2(iz,ix,(it+1))
+        enddo
+      enddo
+      call Ax(.true.,.true.,Vx_x2_adj(:,:,(it+1)),sigmaxx_x2_adj(:,:,it))
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmaxx_x2_adj(iz,ix,it) = sigmaxx_x2_adj(iz,ix,it) + sigmaxx_x2_adj(iz,ix,(it+2))
+        enddo
+      enddo
+    !sigmaxx_z
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmaxx_z2_adj(iz,ix,it) = sigmaxx_z2(iz,ix,(it+1))
+        enddo
+      enddo
+      call Ax(.true.,.true.,Vx_x2_adj(:,:,(it+1)),sigmaxx_z2_adj(:,:,it))
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmaxx_z2_adj(iz,ix,it) = sigmaxx_z2_adj(iz,ix,it) + sigmaxx_z2_adj(iz,ix,(it+2))
+        enddo
+      enddo
+    !sigmazz_x
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmazz_x2_adj(iz,ix,it) = sigmazz_x2(iz,ix,(it+1))
+        enddo
+      enddo
+      call Bz(.true.,.true.,Vz_z2_adj(:,:,(it+1)),sigmazz_x2_adj(:,:,it))
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmazz_x2_adj(iz,ix,it) = sigmazz_x2_adj(iz,ix,it) + sigmazz_x2_adj(iz,ix,(it+2))
+        enddo
+      enddo
+    !sigmazz_z
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmazz_z2_adj(iz,ix,it) = sigmazz_z2(iz,ix,(it+1))
+        enddo
+      enddo
+      call Bz(.true.,.true.,Vz_z2_adj(:,:,(it+1)),sigmazz_z2_adj(:,:,it))
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmazz_z2_adj(iz,ix,it) = sigmazz_z2_adj(iz,ix,it) + sigmazz_z2_adj(iz,ix,(it+2))
+        enddo
+      enddo
+    !sigmaxz_x
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmaxz_x2_adj(iz,ix,it) = sigmaxz_x2(iz,ix,(it+1))
+        enddo
+      enddo
+      call Bx(.true.,.true.,Vx_z2_adj(:,:,(it+1)),sigmaxz_x2_adj(:,:,it))
+      call Az(.true.,.true.,Vz_x2_adj(:,:,(it+1)),sigmaxz_x2_adj(:,:,it))
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmaxz_x2_adj(iz,ix,it) = sigmaxz_x2_adj(iz,ix,it) + sigmaxz_x2_adj(iz,ix,(it+2))
+        enddo
+      enddo
+    !sigmaxz_z
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmaxz_z2_adj(iz,ix,it) = sigmaxz_z2(iz,ix,(it+1))
+        enddo
+      enddo
+      call Bx(.true.,.true.,Vx_z2_adj(:,:,(it+1)),sigmaxz_z2_adj(:,:,it))
+      call Az(.true.,.true.,Vz_x2_adj(:,:,(it+1)),sigmaxz_z2_adj(:,:,it))
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sigmaxz_z2_adj(iz,ix,it) = sigmaxz_z2_adj(iz,ix,it) + sigmaxz_z2_adj(iz,ix,(it+2))
+        enddo
+      enddo
+
+    enddo
+
+    sumvxx=0.
+    sumvxz=0.
+    sumvzx=0.
+    sumvzz=0.   
+    sumsigmaxxx=0.
+    sumsigmaxxz=0.
+    sumsigmazzx=0.
+    sumsigmazzz=0.
+    sumsigmaxzx=0.
+    sumsigmaxzz=0.
+
+    write(0,*)"============================================================="
+    write(0,*)"TEST RANDOM OUTPUT MODEL 2"
+    write(0,*)"============================================================="
+    do it=1,nt
+      do ix=6,nx-5
+        do iz=6,nz-5
+          sumvxx = sumvxx + Vx_x2_adj(iz,ix,it)
+          sumvxz = sumvxz + Vx_z2_adj(iz,ix,it)
+          sumvzx = sumvzx + Vz_x2_adj(iz,ix,it)
+          sumvzz = sumvzz + Vz_z2_adj(iz,ix,it)
+          sumsigmaxxx = sumsigmaxxx + sigmaxx_x2_adj(iz,ix,it)
+          sumsigmaxxz = sumsigmaxxz + sigmaxx_z2_adj(iz,ix,it)
+          sumsigmazzx = sumsigmazzx + sigmazz_x2_adj(iz,ix,it)
+          sumsigmazzz = sumsigmazzz + sigmazz_z2_adj(iz,ix,it)
+          sumsigmaxzx = sumsigmaxzx + sigmaxz_x2_adj(iz,ix,it)
+          sumsigmaxzz = sumsigmaxzz + sigmaxz_z2_adj(iz,ix,it)
+        enddo
+      enddo
+    enddo
+
+    write(0,*)sumvxx,sumvxz,sumvzx,sumvzz,sumsigmaxxx,sumsigmaxxz,sumsigmazzx,sumsigmazzz,sumsigmaxzx,sumsigmaxzz
+
+    write(0,*)"============================================================="
+    write(0,*)"DOT PRODUCT TEST"
+    write(0,*)"============================================================="
+    write(0,*)"Dot product of data 1 and data 2"
+    do it=1,nt
+      do ix=6,nx-5
+        do iz=6,nz-5
+          dp1 = dp1 + Vx_x2(iz,ix,it)*Vx_x_f(iz,ix,it)+&
+                      Vx_z2(iz,ix,it)*Vx_z_f(iz,ix,it)+&
+                      Vz_x2(iz,ix,it)*Vz_x_f(iz,ix,it)+&
+                      Vz_z2(iz,ix,it)*Vz_z_f(iz,ix,it)+&
+                      sigmaxx_x2(iz,ix,it)*sigmaxx_x_f(iz,ix,it)+&
+                      sigmaxx_z2(iz,ix,it)*sigmaxx_z_f(iz,ix,it)+&
+                      sigmazz_x2(iz,ix,it)*sigmazz_x_f(iz,ix,it)+&
+                      sigmazz_z2(iz,ix,it)*sigmazz_z_f(iz,ix,it)+&
+                      sigmaxz_x2(iz,ix,it)*sigmaxz_x_f(iz,ix,it)+&
+                      sigmaxz_z2(iz,ix,it)*sigmaxz_z_f(iz,ix,it)
+        enddo
+      enddo
+    enddo
+    write(0,*)"dp1=",dp1
+
+    write(0,*)"Dot product of model 1 and model 2"
+    do it=1,nt
+      do ix=6,nx-5
+        do iz=6,nz-5
+          dp2 = dp2 + Vx_x(iz,ix,it)*Vx_x2_adj(iz,ix,it)+&
+                      Vx_z(iz,ix,it)*Vx_z2_adj(iz,ix,it)+&
+                      Vz_x(iz,ix,it)*Vz_x2_adj(iz,ix,it)+&
+                      Vz_z(iz,ix,it)*Vz_z2_adj(iz,ix,it)+&
+                      sigmaxx_x(iz,ix,it)*sigmaxx_x2_adj(iz,ix,it)+&
+                      sigmaxx_z(iz,ix,it)*sigmaxx_z2_adj(iz,ix,it)+&
+                      sigmazz_x(iz,ix,it)*sigmazz_x2_adj(iz,ix,it)+&
+                      sigmazz_z(iz,ix,it)*sigmazz_z2_adj(iz,ix,it)+&
+                      sigmaxz_x(iz,ix,it)*sigmaxz_x2_adj(iz,ix,it)+&
+                      sigmaxz_z(iz,ix,it)*sigmaxz_z2_adj(iz,ix,it)
+        enddo
+      enddo
+    enddo
+    write(0,*)"dp2=",dp2
+
+  end subroutine
+
+end module

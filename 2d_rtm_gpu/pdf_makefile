@@ -1,0 +1,16 @@
+
+Fig/%.pdf: Fig/%.v
+	pstexpen Fig/$*.v Fig/$*.ps fat=1 fatmult=1.5 invras=n force=  invras=y color=y
+	ps2pdf \
+	-dDownsampleColorImages=false \
+	-dDownsampleGrayImages=false \
+	-dDownsampleMonoImages=false \
+	-dColorImageFilter=/FlateEncode \
+	-dGrayImageFilter=/FlateEncode \
+	-dMonoImageFilter=/CCITTFaxEncode \
+	-dAutoFilterColorImages=false \
+	-dAutoFilterGrayImages=false \
+	-dAutoFilterMonoImages=false \
+	-dEPSCrop Fig/$*.ps Fig/$*.pdf
+	rm -f $*.v Fig/*ps Fig/*v
+

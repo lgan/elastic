@@ -1,0 +1,4 @@
+make Dat/anomalies/seisp_vzgauss.H -B > log
+make Dat/anomalies/seisp_vzgauss2.H -B >> log
+make Dat/anomalies/seisp_vzgauss3.H -B >> log
+make Dat/anomalies/seisp_vzgauss4.H -B >> log

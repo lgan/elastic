@@ -1,0 +1,9 @@
+nsnap=200
+xsource=75
+zsource=75
+Ttime=1.0
+fp=20.0
+abc=25
+zrec=6
+dtseis=0.002
+free_surface=0

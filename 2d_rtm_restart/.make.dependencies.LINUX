@@ -1,0 +1,33 @@
+ifndef QUICK
+./Obj/snap-mod-rtm.o:  
+./Obj/rtm.o:  ./Obj/rtm-mod-adj.o ./Obj/snap-mod-rtm.o ./Obj/seis-mod-rtm.o  
+./Obj/elastic-mod.o: ./Obj/model-mod.o ./Obj/elasticlib-mod.o  ./Obj/source-mod.o ./Obj/abc-mod.o ./Obj/snap-mod-rtm.o 
+./Obj/rtmlib-modF.o:  
+./Obj/create-model-vp.o:  
+./Obj/rtmlib-mod.o:   ./Obj/rtmlib-modF.o 
+./Obj/born-mod.o: ./Obj/source-mod.o  ./Obj/bornlib-mod.o ./Obj/snap-mod-born.o   
+./Obj/bornlib-mod.o:  
+./Obj/seis-mod-rtm.o:  
+./Obj/rtm-mod-adj.o: ./Obj/model-mod.o ./Obj/rtmlib-mod.o ./Obj/rtmlib-modF.o  ./Obj/source-mod.o ./Obj/abc-mod.o ./Obj/image-mod-rtm.o 
+./Obj/Lint.o:  ./Obj/lint-mod-template.o 
+./Obj/born.o:  ./Obj/born-mod.o  
+./Obj/pickmax.o:  
+./Obj/elasticlib-mod.o:   
+./Obj/source-mod.o:  
+./Obj/src_sgn.o:  
+./Obj/abc-mod.o:  
+./Obj/create-model-lame.o:  
+./Obj/elastic.o:  ./Obj/elastic-mod.o ./Obj/snap-mod-rtm.o ./Obj/seis-mod-rtm.o  
+./Obj/image-mod-rtm.o:   
+./Obj/source.o:  ./Obj/source-mod.o 
+endif  
+./Bin/Lint.x: ./Obj/lint-mod-template.o ${OBJDIR}/Lint.o ${SRCDIR}/Lint.f90
+	 ${F90_LN}
+./Bin/born.x: ./Obj/bornlib-mod.o ./Obj/born-mod.o ./Obj/snap-mod-born.o ./Obj/source-mod.o ${OBJDIR}/born.o ${SRCDIR}/born.f90
+	 ${F90_LN}
+./Bin/elastic.x: ./Obj/snap-mod-rtm.o ./Obj/abc-mod.o ./Obj/model-mod.o ./Obj/elastic-mod.o ./Obj/elasticlib-mod.o ./Obj/source-mod.o ./Obj/seis-mod-rtm.o ${OBJDIR}/elastic.o ${SRCDIR}/elastic.f90
+	 ${F90_LN}
+./Bin/rtm.x: ./Obj/snap-mod-rtm.o ./Obj/abc-mod.o ./Obj/rtmlib-mod.o ./Obj/rtmlib-modF.o ./Obj/model-mod.o ./Obj/rtm-mod-adj.o ./Obj/source-mod.o ./Obj/image-mod-rtm.o ./Obj/seis-mod-rtm.o ${OBJDIR}/rtm.o ${SRCDIR}/rtm.f90
+	 ${F90_LN}
+./Bin/source.x: ./Obj/source-mod.o ${OBJDIR}/source.o ${SRCDIR}/source.f90
+	 ${F90_LN}

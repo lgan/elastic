@@ -1,0 +1,182 @@
+Instruction of each Src_XXX:
+
+Src_cudaXX refers to the work from 2D Elastic RTM Fortran to 2D Elastic RTM CUDA C
+
+Using ./Src_cuda as the working directory 
+Using ./Src_cuda_XX as the backups
+
+
+**************WORKING PATH*************
+in ./Src_working:
+Src_cuda_801_L1_correct, L1 result all correct, start using shared memory
+
+
+7.29  from 729-2, start using CUDA
+
+
+**************RESULT VALIDATION*************
+-----Src_no_BC:
+The original correct fortran code with BC i.e. K() being commentted, used as basic version for result validation
+run script ./diff-result to check the result compared with Src_no_BC
+
+
+
+**************BACKUP*************
+
+Src_cuda_801_shared-05:  simply back up -04, nothing changed, with time profiling
+Src_cuda_801_shared-04:  all Vx, Vz, ...., into shared,   aux_xx, ..... into read only by __ldg()
+Src_cuda_801_shared-03:  all Vx, Vz, ....,  aux_xx, ..... into shared
+Src_cuda_801_shared-02:  simply back up -01, noting changed
+Src_cuda_801_shared-01:  aux_xx, xz, zz, m1_x,m1_z into shared, PreL1 to get 7 speedup
+
+
+Src_cuda_801_L1_correct:
+L1 result result for any time steps
+about to try shared memroy
+
+
+Src_cuda731-1:
+
+Naive gpu version with only L1 used. 
+GPU runs steps under 2000
+
+
+Src_cuda731-debug:
+the problem is : it can work under 2000 step, but cannot work when it == 3000
+
+at it == 3000,  Vx0 and Vz0 work, sigmaxx not work
+
+????? sigmaxx equals to gpu_sigmaxx during comparison, but cannot set sigmaxx to gpu_sigmaxx
+
+
+
+Src_cuda730:
+
+cuda work for each step but not for step ==3000
+
+Src_cuda729-3:
+Start using CUDA, Vx0 to .... all are in cuda now. MUST use nvcc -fmad=false to shut dowm fma
+
+Src_cuda729-2:
+Start using CUDA, Vx0 in cuda now. MUST use nvcc -fmad=false to shut dowm fma
+
+
+
+Src_cuda729-1:
+
+Compared with 729, this version only extended the aux_m1m2,...., without extending the arrays of Vx0, Vz0, ....,  
+Also I can do it the other way by onlying extending Vx0 Vz0,...  without extending the aux_m1...
+
+Src_cuda729:
+
+Ready to GPU
+Before GPU implementation, now the CPU version is unified to be 
+
+Vx0 = f(z,y) + f(z+1,y) + f(z,y+1)...
+Vz0 = ....
+sigmaxx = ...
+sigmazz = ...
+sigmaxz = ...
+
+
+
+Src_cuda728-1:
+
+model[i,j,k] = ..data[i,j,k]...data[i,j+1,k]....data[i,j+2,k] passed with no boundary seperately being handled for all variables 
+with extended arrays being used.
+!!!!!IMPORTANT!!!!!
+and now is time for GPU kernel 
+
+
+Src_cuda728:
+
+model[i,j,k] = ..data[i,j,k]...data[i,j+1,k]....data[i,j+2,k] passed but with no boundary seperately being handled for Vx0
+using extended arrarys ex_siamgxx to store orignal sigmaxx
+
+
+
+
+Src_cuda727:
+
+model[i,j,k] = ..data[i,j,k]...data[i,j+1,k]....data[i,j+2,k] passed but with boundary seperately being handled  
+
+Src_cuda727
+
+!!!!IMPORTANT!!!!!!
+becuase cuda cannot let multiple threads write to one same point, which is very dangerous, 
+so the following form can not work
+	model[i,j,k] = ....data[i,j,k].
+	model[i,j+1,k] = ....data[i,j,k].
+	model[i,j+2,k] = ....data[i,j,k].
+	model[i,j+3,k] = ....data[i,j,k].
+	model[i,j+4,k] = ....data[i,j,k].
+
+So I temporarily backup the current working one into 727 for later use, 
+and start to change the form to 
+
+model[i,j,k] = ..data[i,j,k]...data[i,j+1,k]....data[i,j+2,k]. 
+
+
+
+
+
+Src_cuda725
+
+in rtm_gpu_func() and rtm_gpu_kernel(),
+put the C functions Ax.... to cuda kernel functions in rtm_gpu_kernel() one by one.
+
+
+
+Src_cuda723-1
+passed  data passthrough beyond version 723
+
+
+Src_cuda723
+passed a small gpu init test. the gpu function is in rtmlib-modC.cu
+chaged Makefile to include nvcc
+
+
+paased Src_cuda722-1
+[passed] output difference test by make check
+[passed] figure difference test by make cmp
+
+start cuda for now
+
+
+
+-----Src_cuda_721:
+Passed result validation through using ./diff-result script, compared over Src_no_BC, 
+solved printf() no screen output problem by using fprintf(stderr,)
+and gonna use OMP and GPU optimizaitons
+
+
+-----Src_cuda_716-4:
+Start Version of C OpenMP and C Cuda, using CESS-GPU now
+
+
+-----Src_cuda_716-4:
+All RTM functions from rtm_op2() in rtm-mod-adj.f90 is isolated to rtm_op3() in rtmlib-mod.f90
+Still need to use c interface to implement rtm_op3() to C code i.e. rtm_opttc()
+
+
+
+-----Src_cuda_716-3:
+The latest one beyond 715-1 with the following things been done:
+aux_m2m3  to aux_m2m3_c to .c 
+Ax_c ... J_c are all done to C functions in rtmlib-modC.c using rtmlib-modF.f90 as interface
+
+
+-----Src_cuda_716-1:
+Instead of doing Src_cuda_716, this directory transfering Ax_c ... J_c in rtm_lib_mod.f90 to interfaces Ax_c ... Jc in rtm_lib_modF.f90, and then to Ax_c_ J_c_ in rtm_lib_modC.c. 
+
+
+-----Src_cuda_716:
+All RTM functions including from Ax() to J() from rtmlib-mode.f90 has been isolated to AxF_c() to JF_c() in rtm_lib-modF.f90, as well as an initial function rtmmod-initF() to compute aux_m2, aux_m3 and aux_m2m3. 
+
+
+-----Src_cuda_715:
+[passed]Isolate the function of Ax(adj, add, model, data) from rtmlib-mod.f90 to Ax_c(nz, nx, model, data, m1_x) from rtmlibF-mid. And is now passed. 
+
+
+
+

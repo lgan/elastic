@@ -1,0 +1,16 @@
+nz=300
+oz=0.0
+dz=4.0
+nx=300
+ox=0.0
+dx=4.0
+water=0
+mu1=2.88E9
+lambda1=5.12E9
+rho1=2000.0
+ref=1
+z1=200
+thick=100
+lambda2=6.0E9
+mu2=4.0E9
+rho2=2500.0

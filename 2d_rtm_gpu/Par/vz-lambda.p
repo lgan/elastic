@@ -1,0 +1,12 @@
+nz=300
+oz=0.0
+dz=3.0
+nx=900
+ox=0.0
+dx=3.0
+water=1
+waterz=120
+mu1=2.88E9
+lambda1=5.12E9
+rho1=2000.0
+vz=8.0E6

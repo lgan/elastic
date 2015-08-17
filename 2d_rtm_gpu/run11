@@ -1,0 +1,21 @@
+/lib/cpp  -I. -I/opt/SEP/SEP7.0/include   -DSOURCE='"'/homes/sep/gcalves/research/elastic_rtm/Src/snap-mod-rtm.f90'"' < ./Src/snap-mod-rtm.f90  >snap-mod-rtm.fix.f90 
+ifort -O3 -openmp -I.     -I/opt/SEP/SEP7.0/include -I. -g -FR  -I/opt/SEP/SEP7.0/include -c  -O  -fast -override-limits -module ./Mod    -o Obj/snap-mod-rtm.o     snap-mod-rtm.fix.f90 
+/lib/cpp  -I. -I/opt/SEP/SEP7.0/include   -DSOURCE='"'/homes/sep/gcalves/research/elastic_rtm/Src/abc-mod.f90'"' < ./Src/abc-mod.f90  >abc-mod.fix.f90 
+ifort -O3 -openmp -I.     -I/opt/SEP/SEP7.0/include -I. -g -FR  -I/opt/SEP/SEP7.0/include -c  -O  -fast -override-limits -module ./Mod    -o Obj/abc-mod.o     abc-mod.fix.f90 
+/lib/cpp  -I. -I/opt/SEP/SEP7.0/include   -DSOURCE='"'/homes/sep/gcalves/research/elastic_rtm/Src/rtmlib-mod.f90'"' < ./Src/rtmlib-mod.f90  >rtmlib-mod.fix.f90 
+ifort -O3 -openmp -I.     -I/opt/SEP/SEP7.0/include -I. -g -FR  -I/opt/SEP/SEP7.0/include -c  -O  -fast -override-limits -module ./Mod    -o Obj/rtmlib-mod.o     rtmlib-mod.fix.f90 
+/lib/cpp  -I. -I/opt/SEP/SEP7.0/include   -DSOURCE='"'/homes/sep/gcalves/research/elastic_rtm/Src/model-mod.f90'"' < ./Src/model-mod.f90  >model-mod.fix.f90 
+ifort -O3 -openmp -I.     -I/opt/SEP/SEP7.0/include -I. -g -FR  -I/opt/SEP/SEP7.0/include -c  -O  -fast -override-limits -module ./Mod    -o Obj/model-mod.o     model-mod.fix.f90 
+/lib/cpp  -I. -I/opt/SEP/SEP7.0/include   -DSOURCE='"'/homes/sep/gcalves/research/elastic_rtm/Src/source-mod.f90'"' < ./Src/source-mod.f90  >source-mod.fix.f90 
+ifort -O3 -openmp -I.     -I/opt/SEP/SEP7.0/include -I. -g -FR  -I/opt/SEP/SEP7.0/include -c  -O  -fast -override-limits -module ./Mod    -o Obj/source-mod.o     source-mod.fix.f90 
+/lib/cpp  -I. -I/opt/SEP/SEP7.0/include   -DSOURCE='"'/homes/sep/gcalves/research/elastic_rtm/Src/image-mod-rtm.f90'"' < ./Src/image-mod-rtm.f90  >image-mod-rtm.fix.f90 
+ifort -O3 -openmp -I.     -I/opt/SEP/SEP7.0/include -I. -g -FR  -I/opt/SEP/SEP7.0/include -c  -O  -fast -override-limits -module ./Mod    -o Obj/image-mod-rtm.o     image-mod-rtm.fix.f90 
+/lib/cpp  -I. -I/opt/SEP/SEP7.0/include   -DSOURCE='"'/homes/sep/gcalves/research/elastic_rtm/Src/rtm-mod-adj.f90'"' < ./Src/rtm-mod-adj.f90  >rtm-mod-adj.fix.f90 
+ifort -O3 -openmp -I.     -I/opt/SEP/SEP7.0/include -I. -g -FR  -I/opt/SEP/SEP7.0/include -c  -O  -fast -override-limits -module ./Mod    -o Obj/rtm-mod-adj.o     rtm-mod-adj.fix.f90 
+/lib/cpp  -I. -I/opt/SEP/SEP7.0/include   -DSOURCE='"'/homes/sep/gcalves/research/elastic_rtm/Src/seis-mod-rtm.f90'"' < ./Src/seis-mod-rtm.f90  >seis-mod-rtm.fix.f90 
+ifort -O3 -openmp -I.     -I/opt/SEP/SEP7.0/include -I. -g -FR  -I/opt/SEP/SEP7.0/include -c  -O  -fast -override-limits -module ./Mod    -o Obj/seis-mod-rtm.o     seis-mod-rtm.fix.f90 
+/lib/cpp  -I. -I/opt/SEP/SEP7.0/include   -DSOURCE='"'/homes/sep/gcalves/research/elastic_rtm/Src/rtm.f90'"' < ./Src/rtm.f90  >rtm.fix.f90 
+ifort -O3 -openmp -I.     -I/opt/SEP/SEP7.0/include -I. -g -FR  -I/opt/SEP/SEP7.0/include -c  -O  -fast -override-limits -module ./Mod    -o Obj/rtm.o     rtm.fix.f90 
+ifort -O3 -openmp  -L/opt/SEP/SEP7.0/lib -L/opt/SEP/SEP7.0/lib  Obj/snap-mod-rtm.o Obj/abc-mod.o Obj/rtmlib-mod.o Obj/model-mod.o Obj/rtm-mod-adj.o Obj/source-mod.o Obj/image-mod-rtm.o Obj/seis-mod-rtm.o Obj/rtm.o  -L/opt/SEP/SEP7.0/lib -lsepgeef90 -lsep2df90 -lsep3df90 -lsep3d -lsepf90 -lsep    -lsep3df90 -lsep3d -lsepf90 -lsep   -Vaxlib -lm -L/usr/X11R6/lib64
+/usr/bin/install -c -m 775 a.out Bin/rtm.x
+/bin/rm a.out

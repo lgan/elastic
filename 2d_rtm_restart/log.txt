@@ -1,0 +1,2 @@
+./Bin/create_model2.x par=./Par/water_reflectivity2.p vs=./Dat/vs-water-ref2.H rho=./Dat/rho-water-ref2.H  > Dat/vp-water-ref2.H
+./Bin/Elastic-omp.x <./Dat/vp-water-ref2.H vs=./Dat/vs-water-ref2.H rho=./Dat/rho-water-ref2.H par=./Par/elastic_cte1.p seiss=./Dat/seiss-water-ref2.H snapvx=./Dat/snapvx-water-ref2.H snapvz=./Dat/snapvz-water-ref2.H > Dat/seisp-water-ref2.H

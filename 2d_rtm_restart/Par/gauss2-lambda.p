@@ -1,0 +1,17 @@
+nz=150
+oz=0.0
+dz=4.0
+nx=150
+ox=0.0
+dx=4.0
+water=0
+mi1=2.88E9
+lambda1=5.12E9
+rho1=2000.0
+anom=1
+anomx=75
+anomz=100
+anomsigma=1
+anomlambda=8.0E9
+anommi=2.88E9
+anomrho=2000.0

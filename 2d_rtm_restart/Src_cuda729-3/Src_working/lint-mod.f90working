@@ -1,0 +1,58 @@
+! Linear interpolation operator module
+module lint_mod
+
+  implicit none
+  real, private                         :: dt, dtseis
+  integer, private                      :: nrec, nseis, nout
+  real, dimension(:,:), pointer         :: seis 
+
+  contains
+
+  subroutine lint_init(dt_in,dtseis_in,seis_in,nrec_in,nseis_in,nout_in)
+    integer                     :: nrec_in, nseis_in, nout_in
+    real                        :: dt_in, dtseis_in
+    real, dimension(nseis,nrec), target  :: seis_in
+
+    nrec = nrec_in
+    nseis = nseis_in
+    dt = dt_in
+    nout = nout_in
+    dtseis = dtseis_in
+    seis => seis_in
+
+  end subroutine
+
+  subroutine lint_op(adj, add, model, data)
+    logical,intent(in)          :: adj, add
+    integer                     :: it, ix, iseis
+    real, dimension(:,:)        :: model,data
+    real                        :: temp, f, g
+
+    if (adj) then
+      if (add==0) model=0.
+      do ix=1,nrec
+        do it=1,nout
+          temp = it*dt/dtseis
+          iseis = temp
+          f = temp - iseis
+          g = 1.0 - f
+          model(iseis+1,ix) =  model(iseis+1,ix) + g*data(it,ix) 
+          model(iseis+2,ix) =  model(iseis+2,ix) + f*data(it,ix) 
+        enddo
+      enddo
+    else
+      if (add==0) data=0.
+      do ix=1,nrec
+        do it=1,nout
+          temp = (it*dt)/dtseis
+          iseis = temp
+          f = temp-iseis
+          g = 1.0 - f
+          data(it,ix) = data(it,ix) + (g*model(iseis+1,ix) + f*model(iseis+2,ix))
+        enddo
+      enddo
+    endif
+
+  endsubroutine
+
+end module

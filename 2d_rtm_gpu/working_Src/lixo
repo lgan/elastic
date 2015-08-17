@@ -1,0 +1,159 @@
+  , seisp2, seiss2, vsp1p, vsp1s, vsp2p, vsp2s, vsp3p, vsp3s
+
+
+  ! seisp2.H output parameters
+  call to_history("n1",nseis,"seisp2")
+  call to_history("o1",ot,"seisp2")
+  call to_history("d1",dtseis,"seisp2")
+  call to_history("n2",(nx-2*abc),"seisp2")
+  call to_history("o2",ox,"seisp2")
+  call to_history("d2",dx,"seisp2")
+  call to_history("label1","t","seisp2")
+  call to_history("label2","x","seisp2")
+  ! seiss2.H output parameters
+  call to_history("n1",nseis,"seiss2")
+  call to_history("o1",ot,"seiss2")
+  call to_history("d1",dtseis,"seiss2")
+  call to_history("n2",(nx-2*abc),"seiss2")
+  call to_history("o2",ox,"seiss2")
+  call to_history("d2",dx,"seiss2")
+  call to_history("label1","t","seiss2")
+  call to_history("label2","x","seiss2")
+  ! vsp1p.H output parameters
+  call to_history("n1",nseis,"vsp1p")
+  call to_history("o1",ot,"vsp1p")
+  call to_history("d1",dtseis,"vsp1p")
+  call to_history("n2",(nz-abc),"vsp1p")
+  call to_history("o2",ox,"vsp1p")
+  call to_history("d2",dx,"vsp1p")
+  call to_history("label1","t","vsp1p")
+  call to_history("label2","z","vsp1p")
+  ! vsp1s.H output parameters
+  call to_history("n1",nseis,"vsp1s")
+  call to_history("o1",ot,"vsp1s")
+  call to_history("d1",dtseis,"vsp1s")
+  call to_history("n2",(nz-abc),"vsp1s")
+  call to_history("o2",ox,"vsp1s")
+  call to_history("d2",dx,"vsp1s")
+  call to_history("label1","t","vsp1s")
+  call to_history("label2","z","vsp1s")
+  ! vsp2p.H output parameters
+  call to_history("n1",nseis,"vsp2p")
+  call to_history("o1",ot,"vsp2p")
+  call to_history("d1",dtseis,"vsp2p")
+  call to_history("n2",(nz-abc),"vsp2p")
+  call to_history("o2",ox,"vsp2p")
+  call to_history("d2",dx,"vsp2p")
+  call to_history("label1","t","vsp2p")
+  call to_history("label2","z","vsp2p")
+  ! vsp2s.H output parameters
+  call to_history("n1",nseis,"vsp2s")
+  call to_history("o1",ot,"vsp2s")
+  call to_history("d1",dtseis,"vsp2s")
+  call to_history("n2",(nz-abc),"vsp2s")
+  call to_history("o2",ox,"vsp2s")
+  call to_history("d2",dx,"vsp2s")
+  call to_history("label1","t","vsp2s")
+  call to_history("label2","z","vsp2s")
+  ! vsp3p.H output parameters
+  call to_history("n1",nseis,"vsp3p")
+  call to_history("o1",ot,"vsp3p")
+  call to_history("d1",dtseis,"vsp3p")
+  call to_history("n2",(nz-abc),"vsp3p")
+  call to_history("o2",ox,"vsp3p")
+  call to_history("d2",dx,"vsp3p")
+  call to_history("label1","t","vsp3p")
+  call to_history("label2","z","vsp3p")
+  ! vsp3s.H output parameters
+  call to_history("n1",nseis,"vsp3s")
+  call to_history("o1",ot,"vsp3s")
+  call to_history("d1",dtseis,"vsp3s")
+  call to_history("n2",(nz-abc),"vsp3s")
+  call to_history("o2",ox,"vsp3s")
+  call to_history("d2",dx,"vsp3s")
+  call to_history("label1","t","vsp3s")
+  call to_history("label2","z","vsp3s")
+
+
+  seisp2=0.0
+  seiss2=0.0
+  vsp1p=0.0
+  vsp1s=0.0
+  vsp2p=0.0
+  vsp2s=0.0
+  vsp3p=0.0
+  vsp3s=0.0
+
+  stat = elastic_op(vp,vs,rho,seisp,seiss,seisp2, seiss2, vsp1p, vsp1s, vsp2p, vsp2s, vsp3p, vsp3s,snapvx,snapvz)
+
+  function elastic_op(vp, vs, rho, seisp, seiss, seisp2, seiss2, vsp1p, vsp1s, vsp2p, vsp2s, vsp3p, vsp3s, snapvx, snapvz) result(stat)
+ seisp2, seiss2, vsp1p, vsp1s, vsp2p, vsp2s, vsp3p, vsp3s
+
+seisp2, seiss2, vsp1p, vsp1s, vsp2p, vsp2s, vsp3p, vsp3s, 
+seisp2, seiss2, vsp1p, vsp1s, vsp2p, vsp2s, vsp3p, vsp3s, 
+    real, dimension(nseis,nx-2*abc)     :: seisp2, seiss2
+    real, dimension(nseis,nz-abc)       :: vsp1p, vsp1s
+    real, dimension(nseis,nz-abc)       :: vsp2p, vsp2s
+    real, dimension(nseis,nz-abc)       :: vsp3p, vsp3s
+
+
+    call seis_init(nz,nx, dx, abc, zrec, seisp, seiss,seisp2, seiss2, vsp1p, vsp1s, vsp2p, vsp2s, vsp3p, vsp3s)
+, seisp2_in, seiss2_in,vsp1p_in,vsp1s_in, vsp2p_in, vsp2s_in, vsp3p_in, vsp3s_in
+
+  real, dimension(:,:), pointer, private :: seisp, seiss, seisp2, seiss2, vsp1p, vsp1s, vsp2p, vsp2s, vsp3p, vsp3s
+
+
+, seisp2_in, seiss2_in,vsp1p_in,vsp1s_in, vsp2p_in, vsp2s_in, vsp3p_in, vsp3s_in
+    seisp2 => seisp2_in
+    seiss2 => seiss2_in
+    vsp1p => vsp1p_in
+    vsp1s => vsp1s_in
+    vsp2p => vsp2p_in
+    vsp2s => vsp2s_in
+    vsp3p => vsp3p_in
+    vsp3s => vsp3s_in
+    do ix=1,nx-2*abc
+      dxVx = Vx(zrec+10,ix+abc+1,1)-Vx(zrec+10,ix+abc-1,1)
+      dzVx = Vx(zrec+11,ix+abc,1)-Vx(zrec+9,ix+abc,1)
+      dxVz = Vz(zrec+10,ix+abc+1,1)-Vz(zrec+10,ix+abc-1,1)
+      dzVz = Vz(zrec+11,ix+abc,1)-Vz(zrec+9,ix+abc,1)
+
+      ! Divergence of the velocity field, P seismogram
+      seisp2(countseis,ix) = (dxVx + dzVz)*aux
+      ! Curl of the velocity field, S seismogram
+      seiss2(countseis,ix) = (dzVx - dxVz)*aux
+    enddo
+    do iz=2,nz-1-abc
+      dxVx = Vx(iz,abc+21,1)-Vx(iz,abc+19,1)
+      dzVx = Vx(iz+1,abc+20,1)-Vx(iz-1,abc+20,1)
+      dxVz = Vz(iz,abc+21,1)-Vz(iz,abc+19,1)
+      dzVz = Vz(iz+1,abc+20,1)-Vz(iz-1,abc+20,1)
+
+      ! Divergence of the velocity field, P seismogram
+      vsp1p(countseis,iz) = (dxVx + dzVz)*aux
+      ! Curl of the velocity field, S seismogram
+      vsp1s(countseis,iz) = (dzVx - dxVz)*aux
+    enddo
+    do iz=2,nz-1-abc
+      dxVx = Vx(iz,abc+101,1)-Vx(iz,abc+99,1)
+      dzVx = Vx(iz+1,abc+100,1)-Vx(iz-1,abc+100,1)
+      dxVz = Vz(iz,abc+101,1)-Vz(iz,abc+99,1)
+      dzVz = Vz(iz+1,abc+100,1)-Vz(iz-1,abc+100,1)
+
+      ! Divergence of the velocity field, P seismogram
+      vsp2p(countseis,iz) = (dxVx + dzVz)*aux
+      ! Curl of the velocity field, S seismogram
+      vsp2s(countseis,iz) = (dzVx - dxVz)*aux
+    enddo
+    do iz=2,nz-1-abc
+      dxVx = Vx(iz,abc+201,1)-Vx(iz,abc+199,1)
+      dzVx = Vx(iz+1,abc+200,1)-Vx(iz-1,abc+200,1)
+      dxVz = Vz(iz,abc+201,1)-Vz(iz,abc+199,1)
+      dzVz = Vz(iz+1,abc+200,1)-Vz(iz-1,abc+200,1)
+
+      ! Divergence of the velocity field, P seismogram
+      vsp3p(countseis,iz) = (dxVx + dzVz)*aux
+      ! Curl of the velocity field, S seismogram
+      vsp3s(countseis,iz) = (dzVx - dxVz)*aux
+    enddo
+
