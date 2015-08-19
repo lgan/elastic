@@ -742,6 +742,7 @@ extern "C" void rtm_gpu_func(int ny, int nz, int nx,
 
 
 	cudaEventRecord(start2, 0);
+	
 	fprintf(stderr,"GPU Computing ... ...(NZ=%d, NX=%d, NY=%d, TZ=%d, TX=%d, TY=%d)\n", nz, nx, ny, TZ, TX, TY);
 	
 	for(g_it = 0; g_it < Steps_write_back; g_it++){
