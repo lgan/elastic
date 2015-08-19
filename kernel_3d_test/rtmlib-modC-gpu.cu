@@ -79,8 +79,8 @@ extern "C" void rtm_gpu_init(int ny, int nz, int nx)
 	}
 
 	// data init
-
-
+	
+	//Time step +1
 	cudaMalloc(&g_ex_Vx0_in, sizeof(float)*(ny+10)*(nx+10)*(nz+10));
 	cudaMalloc(&g_ex_Vz0_in, sizeof(float)*(ny+10)*(nx+10)*(nz+10));
 	cudaMalloc(&g_ex_Vy0_in, sizeof(float)*(ny+10)*(nx+10)*(nz+10));
@@ -123,9 +123,13 @@ extern "C" void rtm_gpu_init(int ny, int nz, int nx)
 	cudaMalloc(&g_ex_m1_z, sizeof(float)*(ny+10)*(nx+10)*(nz+10));
 
 	cudaFuncSetCacheConfig(rtm_gpu_kernel,cudaFuncCachePreferShared);
-
-	fprintf(stderr,"GPU Data Init ====> OK\n");
-
+	
+	err = cudaGetLastError();
+	if(cudaSuccess != err){
+		fprintf(stderr, "Cuda error1: %s.\n", cudaGetErrorString(err));
+	}else{	
+		fprintf(stderr,"GPU Data Init ====> OK\n");
+	}
 	// data copy
 
 }
@@ -179,8 +183,12 @@ extern "C" void rtm_gpu_copy_in(int ny, int nz, int nx,
 	cudaMemcpy(g_ex_m3, ex_m3, sizeof(float)*(ny+10)*(nx+10)*(nz+10), cudaMemcpyHostToDevice);
 	cudaMemcpy(g_ex_m2m3, ex_m2m3, sizeof(float)*(ny+10)*(nx+10)*(nz+10), cudaMemcpyHostToDevice);
 	
-
-	fprintf(stderr,"Data Copy To GPU  ====> OK\n");
+	err = cudaGetLastError();
+	if(cudaSuccess != err){
+		fprintf(stderr, "Cuda error1: %s.\n", cudaGetErrorString(err));
+	}else{
+		fprintf(stderr,"Data Copy To GPU  ====> OK\n");
+	}
 }
 
 
@@ -199,8 +207,11 @@ extern "C" void rtm_gpu_copy_out(int ny, int nz, int nx,
 	cudaMemcpy(ex_sigmayz0_out, g_ex_sigmayz0_out, sizeof(float)*(nx+10)*(nz+10)*(ny+10), 	cudaMemcpyDeviceToHost);
 	cudaMemcpy(ex_sigmazz0_out, g_ex_sigmazz0_out, sizeof(float)*(nx+10)*(nz+10)*(ny+10), 	cudaMemcpyDeviceToHost);
 	//cudaMemcpy(sigmazz0, g_sigmazz0,  sizeof(float)*nx*nz*nt, 	cudaMemcpyDeviceToHost);
+	if(cudaSuccess != err){
+		fprintf(stderr, "Cuda error1: %s.\n", cudaGetErrorString(err));
+	}else{
 	fprintf(stderr,"Data Copy To CPU ====> OK\n");
-
+	}
 }
 
 
@@ -251,8 +262,11 @@ extern "C" void rtm_gpu_final()
 	cudaFree(&g_ex_m1_y);
 	cudaFree(&g_ex_m1_z);
 
-
+	if(cudaSuccess != err){
+		fprintf(stderr, "Cuda error1: %s.\n", cudaGetErrorString(err));
+	}else{
 	fprintf(stderr,"GPU Mem Released ====> OK\n");
+	}
 }
 
 

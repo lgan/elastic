@@ -72,6 +72,7 @@ int main(){
 	//****LIN***** 
 	//Temporary extended 3D arrays, later replaced by function inputs/outputs
 	//Time step +1
+	//
 	float * tmp = NULL;
 	
 	float * ex_Vx0_in = (float*)malloc(sizeof(float)*(ny+10)*(nx+10)*(nz+10));
@@ -129,6 +130,8 @@ int main(){
 	float *ex_m1_y = (float*)malloc(sizeof(float)*(ny+10)*(nx+10)*(nz+10));
 	float *ex_m1_z = (float*)malloc(sizeof(float)*(ny+10)*(nx+10)*(nz+10));
 
+
+	//set all values to ZERO
 	for(iy=0;iy<ny+10;iy++)
 	    for(ix=0;ix<nx+10;ix++)
 		for(iz=0;iz<nz+10;iz++){	
@@ -183,7 +186,7 @@ int main(){
 
 	}
 	
-
+	//Randomly set the value to the central areas, so the outer 10 layers keep ZERO
 	for(iy=0;iy<ny;iy++)
 	    for(ix=0;ix<nx;ix++)
 		for(iz=0;iz<nz;iz++){	
